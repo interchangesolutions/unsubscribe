@@ -5,8 +5,19 @@ import { useState } from "react";
 import Link from "next/link";
 import { Mail, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function LoginPage() {
@@ -16,13 +27,10 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     setError("");
-    
+
     try {
-      // In a real implementation, this would redirect to Google OAuth
-      // For demo purposes, we'll simulate a successful login
-      setTimeout(() => {
-        window.location.href = "/dashboard";
-      }, 1500);
+      // Redirect to the backend login endpoint to start the OAuth flow.
+      window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/login`;
     } catch (err) {
       setError("Failed to authenticate with Google. Please try again.");
       setIsLoading(false);

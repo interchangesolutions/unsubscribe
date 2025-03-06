@@ -1,4 +1,6 @@
-// Settings page.tsx 
+// Settings page.tsx
+// Currently this is simulated
+// TODO implement API settings POST request, Add to @lib/api.js
 "use client";
 
 import { useState } from "react";

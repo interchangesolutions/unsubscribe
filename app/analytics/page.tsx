@@ -1,14 +1,14 @@
-// Analytics page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Mail, BarChart3, PieChart, LineChart, ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
-import { mockSubscriptions } from "@/lib/mock-data";
+import { getSubscriptions } from "@/lib/api"; // Import your API helper
+import { Subscription } from "@/lib/types";
 import {
   BarChart,
   Bar,
@@ -24,42 +24,68 @@ import {
   Line,
   Legend,
 } from "recharts";
+import { AlertTriangle, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AnalyticsPage() {
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Prepare data for charts
-  const categoryData = mockSubscriptions.reduce((acc, sub) => {
+  // Fetch real subscription data from your backend API on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const data = await getSubscriptions();
+        setSubscriptions(data);
+      } catch (error) {
+        console.error("Error fetching subscriptions:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // If there is no subscription data yet, default to empty array.
+  const subs = subscriptions || [];
+
+  // Prepare data for charts based on fetched data
+  const categoryData = subscriptions.reduce((acc, sub) => {
+    // Assume each subscription object has a "category" property
     const category = sub.category || "Other";
     if (!acc[category]) {
       acc[category] = 0;
     }
     acc[category]++;
     return acc;
-  }, {} as Record<string, number>);
+  }, {} as Record<string,number>);
 
   const pieData = Object.entries(categoryData).map(([name, value]) => ({
     name,
     value,
   }));
 
-  const frequencyData = mockSubscriptions
-    .sort((a, b) => b.frequency - a.frequency)
+  // Frequency and lastOpened data. Adjust property names if your API uses different keys.
+  const frequencyData = subs
+    .sort((a, b) => (b.frequency ?? 0) - (a.frequency ?? 0))
     .slice(0, 10)
     .map((sub) => ({
       name: sub.name,
-      frequency: sub.frequency,
+      frequency: sub.frequency ?? 0,
     }));
 
-  const lastOpenedData = mockSubscriptions
-    .sort((a, b) => b.lastOpened - a.lastOpened)
+  const lastOpenedData = subs
+    .sort((a, b) => (b.lastOpened ?? 0) - (a.lastOpened ?? 0))
     .slice(0, 10)
     .map((sub) => ({
       name: sub.name,
-      days: sub.lastOpened,
+      days: sub.lastOpened ?? 0,
     }));
 
-  // Prepare data for line chart (simulated email volume over time)
+  // For demonstration, keep emailVolumeData static
   const emailVolumeData = [
     { month: "Jan", volume: 120 },
     { month: "Feb", volume: 150 },
@@ -75,7 +101,7 @@ export default function AnalyticsPage() {
     { month: "Dec", volume: 240 },
   ];
 
-  // Colors for pie chart
+  // Colors for the pie chart
   const COLORS = [
     "hsl(var(--chart-1))",
     "hsl(var(--chart-2))",
@@ -129,7 +155,7 @@ export default function AnalyticsPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{mockSubscriptions.length}</div>
+                    <div className="text-2xl font-bold">{subs.length}</div>
                     <p className="text-xs text-muted-foreground">
                       Across {Object.keys(categoryData).length} categories
                     </p>
@@ -143,7 +169,7 @@ export default function AnalyticsPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      {mockSubscriptions.reduce((sum, sub) => sum + sub.frequency, 0)}
+                      {subs.reduce((sum, sub) => sum + (sub.frequency || 0), 0)}
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Emails per month
@@ -158,7 +184,7 @@ export default function AnalyticsPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      {mockSubscriptions.filter(sub => sub.lastOpened > 30).length}
+                      {subs.filter((sub) => (sub.lastOpened || 0) > 30).length}
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Not opened in 30+ days
@@ -187,15 +213,12 @@ export default function AnalyticsPage() {
                             outerRadius={80}
                             fill="#8884d8"
                             dataKey="value"
-                            label={({ name, percent }) => 
+                            label={({ name, percent }) =>
                               `${name}: ${(percent * 100).toFixed(0)}%`
                             }
                           >
                             {pieData.map((entry, index) => (
-                              <Cell 
-                                key={`cell-${index}`} 
-                                fill={COLORS[index % COLORS.length]} 
-                              />
+                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
                           </Pie>
                           <Tooltip />
@@ -267,17 +290,9 @@ export default function AnalyticsPage() {
                       >
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis type="number" />
-                        <YAxis 
-                          type="category" 
-                          dataKey="name" 
-                          tick={{ fontSize: 12 }} 
-                        />
+                        <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} />
                         <Tooltip />
-                        <Bar 
-                          dataKey="frequency" 
-                          name="Emails per Month" 
-                          fill="hsl(var(--chart-2))" 
-                        />
+                        <Bar dataKey="frequency" name="Emails per Month" fill="hsl(var(--chart-2))" />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -308,17 +323,9 @@ export default function AnalyticsPage() {
                       >
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis type="number" />
-                        <YAxis 
-                          type="category" 
-                          dataKey="name" 
-                          tick={{ fontSize: 12 }} 
-                        />
+                        <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} />
                         <Tooltip />
-                        <Bar 
-                          dataKey="days" 
-                          name="Days Since Last Opened" 
-                          fill="hsl(var(--chart-3))" 
-                        />
+                        <Bar dataKey="days" name="Days Since Last Opened" fill="hsl(var(--chart-3))" />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>

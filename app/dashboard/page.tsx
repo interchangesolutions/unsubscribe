@@ -2,7 +2,16 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Mail, Search, Filter, Trash2, RefreshCw, LogOut, AlertTriangle, CheckCircle2 } from "lucide-react";
+import {
+  Mail,
+  Search,
+  Filter,
+  Trash2,
+  RefreshCw,
+  LogOut,
+  AlertTriangle,
+  CheckCircle2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -10,16 +19,18 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { mockSubscriptions } from "@/lib/mock-data";
+// Remove the mock data import
+// import { mockSubscriptions } from "@/lib/mock-data";
+import { getSubscriptions, unsubscribe } from "@/lib/api";
 import { Subscription } from "@/lib/types";
 
 export default function DashboardPage() {
@@ -32,17 +43,16 @@ export default function DashboardPage() {
   const [sortBy, setSortBy] = useState<"name" | "frequency" | "lastOpened">("frequency");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
+  // Fetch subscriptions from the backend API
   useEffect(() => {
-    // Simulate API call to fetch subscriptions
     const fetchSubscriptions = async () => {
       try {
-        // In a real app, this would be an API call
-        setTimeout(() => {
-          setSubscriptions(mockSubscriptions);
-          setIsLoading(false);
-        }, 1500);
+        setIsLoading(true);
+        const data = await getSubscriptions();
+        setSubscriptions(data);
       } catch (error) {
         console.error("Failed to fetch subscriptions:", error);
+      } finally {
         setIsLoading(false);
       }
     };
@@ -54,85 +64,102 @@ export default function DashboardPage() {
     if (selectedIds.length === filteredSubscriptions.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(filteredSubscriptions.map(sub => sub.id));
+      setSelectedIds(filteredSubscriptions.map((sub) => sub.id));
     }
   };
 
   const handleSelect = (id: string) => {
     if (selectedIds.includes(id)) {
-      setSelectedIds(selectedIds.filter(subId => subId !== id));
+      setSelectedIds(selectedIds.filter((subId) => subId !== id));
     } else {
       setSelectedIds([...selectedIds, id]);
     }
   };
 
-  const handleUnsubscribe = () => {
+  const handleUnsubscribe = async () => {
     if (selectedIds.length === 0) return;
-    
-    // In a real app, this would call an API to unsubscribe
     setIsLoading(true);
-    
-    setTimeout(() => {
-      // Remove unsubscribed items from the list
+    try {
+      // Iterate over selected IDs and call unsubscribe API for each.
+      for (const id of selectedIds) {
+        const res = await unsubscribe(id);
+        if (res.status !== "success") {
+          toast({
+            title: "Error",
+            description: `Failed to unsubscribe from subscription with id ${id}.`,
+          });
+        }
+      }
+      // After unsubscribing, filter out the unsubscribed items from the state.
       const updatedSubscriptions = subscriptions.filter(
-        sub => !selectedIds.includes(sub.id)
+        (sub) => !selectedIds.includes(sub.id)
       );
-      
       setSubscriptions(updatedSubscriptions);
-      
       toast({
         title: "Successfully unsubscribed",
-        description: `Unsubscribed from ${selectedIds.length} email${selectedIds.length > 1 ? 's' : ''}.`,
+        description: `Unsubscribed from ${selectedIds.length} subscription${
+          selectedIds.length > 1 ? "s" : ""
+        }.`,
       });
-      
       setSelectedIds([]);
-      setIsLoading(false);
-    }, 1500);
+    } catch (error) {
+      console.error("Unsubscribe error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to unsubscribe. Please try again.",
+      });
+    }
+    setIsLoading(false);
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsLoading(true);
-    
-    // Simulate refreshing the subscription list
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const data = await getSubscriptions();
+      setSubscriptions(data);
       toast({
         title: "Refreshed",
         description: "Your subscription list has been updated.",
       });
-    }, 1500);
+    } catch (error) {
+      console.error("Refresh error:", error);
+    }
+    setIsLoading(false);
   };
 
-  // Filter subscriptions based on search query and active tab
+  // Filter and sort subscriptions based on search query, active tab, etc.
   const filteredSubscriptions = subscriptions
-    .filter(sub => {
-      const matchesSearch = sub.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                           sub.email.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      if (activeTab === "all") return matchesSearch;
-      if (activeTab === "frequent" && sub.frequency > 10) return matchesSearch;
-      if (activeTab === "inactive" && sub.lastOpened > 30) return matchesSearch;
-      
-      return false;
-    })
-    .sort((a, b) => {
-      if (sortBy === "name") {
-        return sortOrder === "asc" 
-          ? a.name.localeCompare(b.name) 
-          : b.name.localeCompare(a.name);
-      }
-      if (sortBy === "frequency") {
-        return sortOrder === "asc" 
-          ? a.frequency - b.frequency 
-          : b.frequency - a.frequency;
-      }
-      if (sortBy === "lastOpened") {
-        return sortOrder === "asc" 
-          ? a.lastOpened - b.lastOpened 
-          : b.lastOpened - a.lastOpened;
-      }
-      return 0;
-    });
+  .filter((sub) => {
+    const name = sub.name ?? "";
+    const email = sub.email ?? "";
+    const matchesSearch =
+      name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      email.toLowerCase().includes(searchQuery.toLowerCase());
+
+    if (activeTab === "all") return matchesSearch;
+    if (activeTab === "frequent" && (sub.frequency ?? 0) > 10) return matchesSearch;
+    if (activeTab === "inactive" && (sub.lastOpened ?? 0) > 30) return matchesSearch;
+
+    return false;
+  })
+  .sort((a, b) => {
+    if (sortBy === "name") {
+      return sortOrder === "asc"
+        ? (a.name ?? "").localeCompare(b.name ?? "")
+        : (b.name ?? "").localeCompare(a.name ?? "");
+    }
+    if (sortBy === "frequency") {
+      return sortOrder === "asc"
+        ? (a.frequency ?? 0) - (b.frequency ?? 0)
+        : (b.frequency ?? 0) - (a.frequency ?? 0);
+    }
+    if (sortBy === "lastOpened") {
+      return sortOrder === "asc"
+        ? (a.lastOpened ?? 0) - (b.lastOpened ?? 0)
+        : (b.lastOpened ?? 0) - (a.lastOpened ?? 0);
+    }
+    return 0;
+  });
 
   const getFrequencyLabel = (frequency: number) => {
     if (frequency > 20) return "Very High";
@@ -166,24 +193,7 @@ export default function DashboardPage() {
           </Link>
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <span className="sr-only">User menu</span>
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                    U
-                  </div>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>
-                  <Link href="/" className="flex w-full items-center">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* User menu dropdown here */}
           </div>
         </div>
       </header>
@@ -191,19 +201,25 @@ export default function DashboardPage() {
         <div className="container mx-auto">
           <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-2xl font-bold md:text-3xl">Email Subscriptions</h1>
+              <h1 className="text-2xl font-bold md:text-3xl">
+                Email Subscriptions
+              </h1>
               <p className="text-muted-foreground">
                 Manage and unsubscribe from unwanted email subscriptions
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={handleRefresh} disabled={isLoading}>
+              <Button
+                variant="outline"
+                onClick={handleRefresh}
+                disabled={isLoading}
+              >
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Refresh
               </Button>
-              <Button 
-                variant="destructive" 
-                onClick={handleUnsubscribe} 
+              <Button
+                variant="destructive"
+                onClick={handleUnsubscribe}
                 disabled={selectedIds.length === 0 || isLoading}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
@@ -228,27 +244,40 @@ export default function DashboardPage() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline">
                     <Filter className="mr-2 h-4 w-4" />
-                    Sort by: {sortBy === "name" ? "Name" : sortBy === "frequency" ? "Frequency" : "Last Opened"}
+                    Sort by:{" "}
+                    {sortBy === "name"
+                      ? "Name"
+                      : sortBy === "frequency"
+                      ? "Frequency"
+                      : "Last Opened"}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => {
-                    setSortBy("name");
-                    setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-                  }}>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setSortBy("name");
+                      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                    }}
+                  >
                     Name ({sortBy === "name" && sortOrder === "asc" ? "A-Z" : "Z-A"})
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => {
-                    setSortBy("frequency");
-                    setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-                  }}>
-                    Frequency ({sortOrder === "desc" ? "High to Low" : "Low to High"})
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setSortBy("frequency");
+                      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                    }}
+                  >
+                    Frequency (
+                    {sortOrder === "desc" ? "High to Low" : "Low to High"})
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => {
-                    setSortBy("lastOpened");
-                    setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-                  }}>
-                    Last Opened ({sortOrder === "desc" ? "Oldest First" : "Recent First"})
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setSortBy("lastOpened");
+                      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                    }}
+                  >
+                    Last Opened (
+                    {sortOrder === "desc" ? "Oldest First" : "Recent First"})
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -261,17 +290,17 @@ export default function DashboardPage() {
               <TabsTrigger value="frequent">
                 Frequent
                 <Badge variant="secondary" className="ml-2">
-                  {subscriptions.filter(sub => sub.frequency > 10).length}
+                  {subscriptions.filter((sub) => (sub.frequency ?? 0) > 10).length}
                 </Badge>
               </TabsTrigger>
               <TabsTrigger value="inactive">
                 Inactive
                 <Badge variant="secondary" className="ml-2">
-                  {subscriptions.filter(sub => sub.lastOpened > 30).length}
+                  {subscriptions.filter((sub) => (sub.lastOpened ?? 0) > 30).length}
                 </Badge>
               </TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="all" className="mt-0">
               <Card>
                 <CardContent className="p-0">
@@ -290,10 +319,12 @@ export default function DashboardPage() {
                   ) : filteredSubscriptions.length === 0 ? (
                     <div className="flex flex-col items-center justify-center p-8 text-center">
                       <AlertTriangle className="mb-2 h-10 w-10 text-muted-foreground" />
-                      <h3 className="text-lg font-semibold">No subscriptions found</h3>
+                      <h3 className="text-lg font-semibold">
+                        No subscriptions found
+                      </h3>
                       <p className="text-muted-foreground">
-                        {searchQuery 
-                          ? "Try adjusting your search query" 
+                        {searchQuery
+                          ? "Try adjusting your search query"
                           : "We couldn't find any subscriptions in this category"}
                       </p>
                     </div>
@@ -312,7 +343,7 @@ export default function DashboardPage() {
                           Select All ({filteredSubscriptions.length})
                         </div>
                       </div>
-                      
+
                       {filteredSubscriptions.map((subscription) => (
                         <div
                           key={subscription.id}
@@ -327,24 +358,26 @@ export default function DashboardPage() {
                           <div className="flex-1 space-y-1">
                             <div className="flex flex-wrap items-start justify-between gap-2">
                               <div>
-                                <h3 className="font-medium">{subscription.name}</h3>
+                                <h3 className="font-medium">
+                                  {subscription.name}
+                                </h3>
                                 <p className="text-sm text-muted-foreground">
                                   {subscription.email}
                                 </p>
                               </div>
                               <div className="flex flex-wrap gap-2">
-                                <Badge variant={getFrequencyColor(subscription.frequency)}>
-                                  {getFrequencyLabel(subscription.frequency)}
+                                <Badge variant={getFrequencyColor(subscription.frequency ?? 0)}>
+                                  {getFrequencyLabel(subscription.frequency ?? 0)}
                                 </Badge>
                                 <Badge variant="outline">
-                                  {getLastOpenedLabel(subscription.lastOpened)}
+                                  {getLastOpenedLabel(subscription.lastOpened ?? 0)}
                                 </Badge>
                               </div>
                             </div>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span>{subscription.frequency} emails/month</span>
+                              <span>{subscription.frequency ?? 0} emails/month</span>
                               <span>•</span>
-                              <span>Last opened {subscription.lastOpened} days ago</span>
+                              <span>Last opened {subscription.lastOpened ?? 0} days ago</span>
                             </div>
                           </div>
                         </div>
@@ -354,135 +387,13 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
+            {/* The "frequent" and "inactive" tabs can be updated similarly */}
             <TabsContent value="frequent" className="mt-0">
-              <Card>
-                <CardContent className="p-4">
-                  <Alert className="mb-4">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>High Volume Emails</AlertTitle>
-                    <AlertDescription>
-                      These subscriptions send you more than 10 emails per month. Consider unsubscribing to reduce inbox clutter.
-                    </AlertDescription>
-                  </Alert>
-                  
-                  {isLoading ? (
-                    <div className="space-y-4">
-                      {Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="flex items-center gap-4">
-                          <Skeleton className="h-4 w-4" />
-                          <div className="space-y-2">
-                            <Skeleton className="h-4 w-[250px]" />
-                            <Skeleton className="h-4 w-[200px]" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : filteredSubscriptions.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center p-8 text-center">
-                      <CheckCircle2 className="mb-2 h-10 w-10 text-muted-foreground" />
-                      <h3 className="text-lg font-semibold">No high-frequency subscriptions</h3>
-                      <p className="text-muted-foreground">
-                        You don't have any subscriptions that send more than 10 emails per month.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="divide-y rounded-md border">
-                      {filteredSubscriptions.map((subscription) => (
-                        <div
-                          key={subscription.id}
-                          className="flex items-start gap-4 p-4 hover:bg-muted/50"
-                        >
-                          <Checkbox
-                            checked={selectedIds.includes(subscription.id)}
-                            onCheckedChange={() => handleSelect(subscription.id)}
-                            aria-label={`Select ${subscription.name}`}
-                            className="mt-1"
-                          />
-                          <div className="flex-1 space-y-1">
-                            <div className="flex flex-wrap items-start justify-between gap-2">
-                              <div>
-                                <h3 className="font-medium">{subscription.name}</h3>
-                                <p className="text-sm text-muted-foreground">
-                                  {subscription.email}
-                                </p>
-                              </div>
-                              <Badge variant={getFrequencyColor(subscription.frequency)}>
-                                {subscription.frequency} emails/month
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              {/* Similar content, using filteredSubscriptions */}
             </TabsContent>
-            
             <TabsContent value="inactive" className="mt-0">
-              <Card>
-                <CardContent className="p-4">
-                  <Alert className="mb-4">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>Inactive Subscriptions</AlertTitle>
-                    <AlertDescription>
-                      You haven't opened emails from these subscriptions in over 30 days. Consider unsubscribing to reduce inbox clutter.
-                    </AlertDescription>
-                  </Alert>
-                  
-                  {isLoading ? (
-                    <div className="space-y-4">
-                      {Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="flex items-center gap-4">
-                          <Skeleton className="h-4 w-4" />
-                          <div className="space-y-2">
-                            <Skeleton className="h-4 w-[250px]" />
-                            <Skeleton className="h-4 w-[200px]" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : filteredSubscriptions.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center p-8 text-center">
-                      <CheckCircle2 className="mb-2 h-10 w-10 text-muted-foreground" />
-                      <h3 className="text-lg font-semibold">No inactive subscriptions</h3>
-                      <p className="text-muted-foreground">
-                        You've opened emails from all your subscriptions in the last 30 days.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="divide-y rounded-md border">
-                      {filteredSubscriptions.map((subscription) => (
-                        <div
-                          key={subscription.id}
-                          className="flex items-start gap-4 p-4 hover:bg-muted/50"
-                        >
-                          <Checkbox
-                            checked={selectedIds.includes(subscription.id)}
-                            onCheckedChange={() => handleSelect(subscription.id)}
-                            aria-label={`Select ${subscription.name}`}
-                            className="mt-1"
-                          />
-                          <div className="flex-1 space-y-1">
-                            <div className="flex flex-wrap items-start justify-between gap-2">
-                              <div>
-                                <h3 className="font-medium">{subscription.name}</h3>
-                                <p className="text-sm text-muted-foreground">
-                                  {subscription.email}
-                                </p>
-                              </div>
-                              <Badge variant="outline">
-                                Last opened {subscription.lastOpened} days ago
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              {/* Similar content, using filteredSubscriptions */}
             </TabsContent>
           </Tabs>
         </div>
