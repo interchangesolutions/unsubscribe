@@ -21,48 +21,15 @@ export default function DashboardLayout({
   const pathname = usePathname();
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="border-b">
+    <>
+      {/* Dashboard-specific navigation only */}
+      <nav className="border-b">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <Link href="/" className="flex items-center gap-2">
-            <Mail className="h-6 w-6" />
-            <span className="text-xl font-bold">UnsubscribeMe</span>
-          </Link>
-          <nav className="hidden md:flex md:items-center md:gap-6">
-            <Link 
-              href="/dashboard" 
-              className={`flex items-center gap-2 text-sm font-medium ${
-                pathname === "/dashboard" 
-                  ? "text-foreground" 
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <LayoutDashboard className="h-4 w-4" />
-              Dashboard
-            </Link>
-            <Link 
-              href="/analytics" 
-              className={`flex items-center gap-2 text-sm font-medium ${
-                pathname === "/analytics" 
-                  ? "text-foreground" 
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <BarChart3 className="h-4 w-4" />
-              Analytics
-            </Link>
-            <Link 
-              href="/settings" 
-              className={`flex items-center gap-2 text-sm font-medium ${
-                pathname === "/settings" 
-                  ? "text-foreground" 
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Settings className="h-4 w-4" />
-              Settings
-            </Link>
-          </nav>
+          {/* Minimal branding or dashboard title */}
+          <div className="flex items-center gap-2">
+            <span className="text-xl font-bold">Dashboard</span>
+          </div>
+          {/* Dashboard navigation items */}
           <div className="flex items-center gap-4">
             <ThemeToggle />
             <DropdownMenu>
@@ -76,19 +43,28 @@ export default function DashboardLayout({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem>
-                  <Link href="/dashboard" className="flex w-full items-center md:hidden">
+                  <Link
+                    href="/dashboard"
+                    className="flex w-full items-center md:hidden"
+                  >
                     <LayoutDashboard className="mr-2 h-4 w-4" />
                     <span>Dashboard</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
-                  <Link href="/analytics" className="flex w-full items-center md:hidden">
+                  <Link
+                    href="/analytics"
+                    className="flex w-full items-center md:hidden"
+                  >
                     <BarChart3 className="mr-2 h-4 w-4" />
                     <span>Analytics</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
-                  <Link href="/settings" className="flex w-full items-center md:hidden">
+                  <Link
+                    href="/settings"
+                    className="flex w-full items-center md:hidden"
+                  >
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </Link>
@@ -103,13 +79,9 @@ export default function DashboardLayout({
             </DropdownMenu>
           </div>
         </div>
-      </header>
-      {children}
-      <footer className="border-t py-6">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} UnsubscribeMe. All rights reserved.
-        </div>
-      </footer>
-    </div>
+      </nav>
+      <main>{children}</main>
+      {/* Do not include a footer here. The global layout already renders one. */}
+    </>
   );
 }
