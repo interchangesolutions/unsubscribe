@@ -25,11 +25,11 @@ export default function DashboardLayout({
       {/* Dashboard-specific navigation only */}
       <nav className="border-b">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          {/* Minimal branding or dashboard title */}
-          <div className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2">
+            {/* Optionally, you might choose not to include a full header here 
+                if the global layout already renders one. */}
             <span className="text-xl font-bold">Dashboard</span>
-          </div>
-          {/* Dashboard navigation items */}
+          </Link>
           <div className="flex items-center gap-4">
             <ThemeToggle />
             <DropdownMenu>
@@ -43,28 +43,19 @@ export default function DashboardLayout({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem>
-                  <Link
-                    href="/dashboard"
-                    className="flex w-full items-center md:hidden"
-                  >
+                  <Link href="/dashboard" className="flex w-full items-center md:hidden">
                     <LayoutDashboard className="mr-2 h-4 w-4" />
                     <span>Dashboard</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
-                  <Link
-                    href="/analytics"
-                    className="flex w-full items-center md:hidden"
-                  >
+                  <Link href="/analytics" className="flex w-full items-center md:hidden">
                     <BarChart3 className="mr-2 h-4 w-4" />
                     <span>Analytics</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
-                  <Link
-                    href="/settings"
-                    className="flex w-full items-center md:hidden"
-                  >
+                  <Link href="/settings" className="flex w-full items-center md:hidden">
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </Link>
@@ -80,8 +71,8 @@ export default function DashboardLayout({
           </div>
         </div>
       </nav>
+      {/* Render nested dashboard content */}
       <main>{children}</main>
-      {/* Do not include a footer here. The global layout already renders one. */}
     </>
   );
 }
