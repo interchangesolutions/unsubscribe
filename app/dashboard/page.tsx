@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Mail,
   Search,
@@ -42,6 +43,17 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("all");
   const [sortBy, setSortBy] = useState<"name" | "frequency" | "lastOpened">("frequency");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // extract JWS token from header
+  useEffect(() => {
+    const token = searchParams.get("token");
+    if (token) {
+      localStorage.setItem("token", token);
+      router.replace("/dashboard");
+    }
+  }, [searchParams, router]);
 
   // Fetch subscriptions from the backend API
   useEffect(() => {
