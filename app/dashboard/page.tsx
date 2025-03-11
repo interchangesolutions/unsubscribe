@@ -90,30 +90,49 @@ export default function DashboardPage() {
 
   const handleUnsubscribe = async () => {
     if (selectedIds.length === 0) return;
+    
     setIsLoading(true);
+    
     try {
-      // Iterate over selected IDs and call unsubscribe API for each.
+      let manualRequired = false;
+      let confirmationURLs = [];
+      
       for (const id of selectedIds) {
         const res = await unsubscribe(id);
-        if (res.status !== "success") {
+        if (res.status === "manual") {
+          manualRequired = true;
+          if (res.confirmation_url) {
+            confirmationURLs.push({ id, url: res.confirmation_url });
+          }
+        } else if (res.status !== "success") {
           toast({
             title: "Error",
             description: `Failed to unsubscribe from subscription with id ${id}.`,
           });
         }
       }
-      // After unsubscribing, filter out the unsubscribed items from the state.
-      const updatedSubscriptions = subscriptions.filter(
-        (sub) => !selectedIds.includes(sub.id)
-      );
-      setSubscriptions(updatedSubscriptions);
-      toast({
-        title: "Successfully unsubscribed",
-        description: `Unsubscribed from ${selectedIds.length} subscription${
-          selectedIds.length > 1 ? "s" : ""
-        }.`,
-      });
-      setSelectedIds([]);
+      
+      if (manualRequired) {
+        toast({
+          title: "Manual Action Required",
+          description: "Some subscriptions require manual confirmation. Please check your email or follow the provided link.",
+        });
+        // Optionally, open the confirmation URLs:
+        confirmationURLs.forEach(item => {
+          // For example, open in a new tab:
+          window.open(item.url, '_blank');
+        });
+      } else {
+        const updatedSubscriptions = subscriptions.filter(
+          (sub) => !selectedIds.includes(sub.id)
+        );
+        setSubscriptions(updatedSubscriptions);
+        toast({
+          title: "Successfully unsubscribed",
+          description: `Unsubscribed from ${selectedIds.length} subscription${selectedIds.length > 1 ? "s" : ""}.`,
+        });
+        setSelectedIds([]);
+      }
     } catch (error) {
       console.error("Unsubscribe error:", error);
       toast({
