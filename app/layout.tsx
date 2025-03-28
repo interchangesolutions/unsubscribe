@@ -8,7 +8,7 @@ import { Toaster } from '@/components/ui/toaster';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'UnsubscribeMe - Email Subscription Manager',
+  title: 'TidyInbox - Email Subscription Manager',
   description: 'Manage and unsubscribe from unwanted email subscriptions easily',
 };
 

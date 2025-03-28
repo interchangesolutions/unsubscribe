@@ -10,7 +10,7 @@ export default function Home() {
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <Mail className="h-6 w-6" />
-            <span className="text-xl font-bold">UnsubscribeMe</span>
+            <span className="text-xl font-bold">TidyInbox</span>
           </div>
           <nav className="flex items-center gap-4">
             <Link href="/login">
@@ -88,10 +88,10 @@ export default function Home() {
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
             <div className="flex items-center gap-2">
               <Mail className="h-5 w-5" />
-              <span className="font-semibold">UnsubscribeMe</span>
+              <span className="font-semibold">TidyInbox</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} UnsubscribeMe. All rights reserved.
+              © {new Date().getFullYear()} TidyInbox. All rights reserved.
             </p>
             <nav className="flex gap-4 text-sm text-muted-foreground">
               <Link href="#" className="hover:text-foreground">

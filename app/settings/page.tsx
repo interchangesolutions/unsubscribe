@@ -47,7 +47,7 @@ export default function SettingsPage() {
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-2">
             <Mail className="h-6 w-6" />
-            <span className="text-xl font-bold">UnsubscribeMe</span>
+            <span className="text-xl font-bold">TidyInbox</span>
           </Link>
           <div className="flex items-center gap-4">
             <ThemeToggle />
@@ -120,7 +120,7 @@ export default function SettingsPage() {
               <CardHeader>
                 <CardTitle>Automation Settings</CardTitle>
                 <CardDescription>
-                  Configure how UnsubscribeMe manages your subscriptions
+                  Configure how TidyInbox manages your subscriptions
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -218,7 +218,7 @@ export default function SettingsPage() {
       </main>
       <footer className="border-t py-6">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} UnsubscribeMe. All rights reserved.
+          © {new Date().getFullYear()} TidyInbox. All rights reserved.
         </div>
       </footer>
     </div>
